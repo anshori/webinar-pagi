@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+	<meta charset="utf-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+	<title>Leaflet JS</title>
+	<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+	<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.5/dist/css/bootstrap.min.css" rel="stylesheet">
+	<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css" />
+	<style>
+		#map {
+			width: 100vw;
+			height: calc(100vh - 56px);
+		}
+	</style>
+</head>
+
+<body>
+	<nav class="navbar navbar-expand-lg bg-dark" data-bs-theme="dark">
+		<div class="container-fluid">
+			<a class="navbar-brand" href="#"><i class="fa-solid fa-map-location-dot"></i> Web GIS PAGI</a>
+			<button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent"
+				aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+				<span class="navbar-toggler-icon"></span>
+			</button>
+			<div class="collapse navbar-collapse" id="navbarSupportedContent">
+				<ul class="navbar-nav ms-auto mb-2 mb-lg-0">
+					<li class="nav-item">
+						<a class="nav-link" href="https://pagiiges.org/" target="_blank"><i class="fa-solid fa-link"></i> Link</a>
+					</li>
+				</ul>
+			</div>
+		</div>
+	</nav>
+	<div id="map"></div>
+
+	<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+	<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+	<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.5/dist/js/bootstrap.bundle.min.js"></script>
+	<script>
+		// Inisialisasi peta
+		var map = L.map("map").setView([-1.3072926, 116.6425323], 10);
+
+		// disable attribution control
+		map.attributionControl.setPrefix(false);
+
+		// Tile Layer Basemap
+		var osm = L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+			attribution:
+				'© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+		});
+
+		var RupabumiIndonesia = L.tileLayer('https://geoservices.big.go.id/rbi/rest/services/BASEMAP/Rupabumi_Indonesia/MapServer/tile/{z}/{y}/{x}', {
+			maxZoom: 20,
+			attribution: 'Badan Informasi Geospasial',
+			bounds: [[8, 144], [-15, 90]]
+		});
+
+		// Menambahkan basemap ke dalam peta
+		osm.addTo(map);
+
+		// Layer Geologi
+		var symbologyCategorized = { "Tmpb": "#946000", "Tomp": "#ffdea1", "Toty": "#fe5e3b", "Tmbl": "#df3598", "Tmbp": "#4cec8f", "Tpkb": "#e7a2c9", "Qa": "#a92fe5" };
+		var geologi = L.geoJSON(null, {
+			// Style
+			style: function (feature) {
+				return {
+					color: "gray",
+					opacity: 1,
+					weight: 1,
+					fillColor: symbologyCategorized[feature.properties.symbols],
+					fillOpacity: 0.8,
+				};
+			},
+			// onEachFeature
+			onEachFeature: function (feature, layer) {
+				layer.on({
+					mouseover: function (e) {
+						geologi.bindTooltip(feature.properties.symbols, {
+							direction: "auto",
+							sticky: true,
+						});
+					},
+				});
+			},
+		});
+		$.getJSON("data/geologi.geojson", function (data) {
+			geologi.addData(data); // Menambahkan data ke dalam GeoJSON
+			map.addLayer(geologi); // Menambahkan GeoJSON ke dalam peta
+		});
+
+		var bataskecamatan = L.geoJSON(null, {
+			// Style
+			style: function (feature) {
+				return {
+					color: "black",
+					opacity: 1,
+					weight: 1,
+					fillColor: "white",
+					fillOpacity: 0,
+				};
+			},
+			// onEachFeature
+			onEachFeature: function (feature, layer) {
+				layer.on({
+					mouseover: function (e) {
+						bataskecamatan.bindTooltip(feature.properties.nm_kec, {
+							direction: "auto",
+							sticky: true,
+						});
+					},
+				});
+			},
+		});
+		$.getJSON("data/batas_kecamatan_4326.geojson", function (data) {
+			bataskecamatan.addData(data); // Menambahkan data ke dalam GeoJSON
+			map.addLayer(bataskecamatan); // Menambahkan GeoJSON ke dalam peta
+			map.fitBounds(bataskecamatan.getBounds()); // Mengatur batas peta sesuai dengan batas GeoJSON
+		});
+
+		// Control Layer
+		var baseMaps = {
+			"OpenStreetMap": osm,
+			"Rupabumi Indonesia": RupabumiIndonesia,
+		};
+
+		var overlayMaps = {
+			"Batas Kecamatan": bataskecamatan,
+			"Geologi": geologi,
+		};
+
+		var controllayer = L.control.layers(baseMaps, overlayMaps, {
+			collapsed: false,
+		});
+		controllayer.addTo(map);
+	</script>
+</body>
+
+</html>
